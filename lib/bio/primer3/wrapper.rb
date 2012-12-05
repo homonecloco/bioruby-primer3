@@ -6,9 +6,16 @@ require 'pp'
 class Bio::Primer3
   # Can only handle single records to be passed at one time to primer3
   def self.run(primer3_options_hash)
-    input = BoulderIO::Record.new(primer3_options_hash)
-    puts 'input==='
-    p input
+    default_options = {}
+    unless primer3_options_hash.key?('PRIMER_THERMODYNAMIC_PARAMETERS_PATH')
+      @@thermodynamic_parameters_path ||= Bio::Primer3.compute_thermodynamic_parameters_path
+      unless @@thermodynamic_parameters_path.nil?
+        default_options['PRIMER_THERMODYNAMIC_PARAMETERS_PATH'] = @@thermodynamic_parameters_path
+      end
+    end
+    merged_hash = default_options.merge(primer3_options_hash)
+    
+    input = BoulderIO::Record.new(merged_hash)
 
     result = Bio::Primer3::Result.new
     Dir.mktmpdir do |dir|
@@ -18,7 +25,7 @@ class Bio::Primer3
           stdin.close
 
           error  = stderr.readlines
-          raise error unless error.nil? or error==[]
+          raise Exception, error unless error.nil? or error==[]
 
           result.output_hash = BoulderIO::Record.create(stdout.read).attributes
         end
@@ -28,32 +35,30 @@ class Bio::Primer3
     return result
   end
   
+  # By default, primer3_core can't find it's own parameters path
+  # (parameter PRIMER_THERMODYNAMIC_PARAMETERS_PATH) unless it is 
+  # specified. This method computes the correct path based on the location
+  # of the primer3 executable, and returns the parameters folder
+  # based on it, or nil if none can be found
+  def self.compute_thermodynamic_parameters_path
+    guessed_path = File.join(
+      File.dirname(`which primer3_core`),
+      'primer3_config/'
+      )
+    return nil unless File.exist?(guessed_path) and File.directory?(guessed_path)
+    return guessed_path
+  end
+  
   # Ask primer3 if 2 primers are compatible, without regard to the sequence
   # that they PCR. i.e. work out if there is any primer dimer issue, for instance
   # or whether they have disparate melting temperatures
   def self.test_primer_compatibility(primer1, primer2, other_primer3_options_hash={})
-    num_middle_ns = 40
-    dummy_sequence = primer1+'N'*num_middle_ns+Bio::Sequence::NA.new(primer2).reverse_complement.to_s.upcase
     hash = {
-      'SEQUENCE_TEMPLATE' => dummy_sequence,
-      'PRIMER_PICK_LEFT_PRIMER'=>1,
-      'PRIMER_PICK_RIGHT_PRIMER'=>1,
-      'PRIMER_PRODUCT_SIZE_RANGE'=>"#{dummy_sequence.length}-#{dummy_sequence.length}",
-      'SEQUENCE_INTERNAL_EXCLUDED_REGION'=> "#{primer1.length+1},#{num_middle_ns}",
-      'SEQUENCE_TARGET'=> "#{primer1.length+1},#{num_middle_ns}",
+      'SEQUENCE_PRIMER'=>primer1,
+      'SEQUENCE_PRIMER_REVCOMP'=>primer2,
+      'PRIMER_TASK'=>'check_primers',
     }.merge(other_primer3_options_hash)
     
-    result = Bio::Primer3.run hash
-    puts 'output ====='
-    pp result
-    return false if !result.primer_found?
-    
-    # A primer was found. Double check to make sure that the primer
-    # we wanted was actually found
-    unless result['PRIMER_LEFT_0_SEQUENCE']==primer1 and result['PRIMER_RIGHT_0_SEQUENCE']==primer2
-      pp result
-      raise "Programming error in primer3#test_primer_compatibility - testing was not carried out correctly. Please report a bug. Thanks."
-    end
-    return true
+    return Bio::Primer3.run(hash).primer_found?
   end
 end
