@@ -16,6 +16,12 @@ class Bio::Primer3
     merged_hash = default_options.merge(primer3_options_hash)
     
     input = BoulderIO::Record.new(merged_hash)
+    
+    log = Bio::Log::LoggerPlus['bio-primer3']
+    if log.debug?
+      log.debug "Primer3 input:"
+      log.debug input.to_s
+    end
 
     result = Bio::Primer3::Result.new
     Dir.mktmpdir do |dir|
@@ -26,8 +32,14 @@ class Bio::Primer3
 
           error  = stderr.readlines
           raise Exception, error unless error.nil? or error==[]
+          
+          out = stdout.read
+          if log.debug?
+            log.debug "Primer3 output:"
+            log.debug out
+          end
 
-          result.output_hash = BoulderIO::Record.create(stdout.read).attributes
+          result.output_hash = BoulderIO::Record.create(out).attributes
         end
       end
     end

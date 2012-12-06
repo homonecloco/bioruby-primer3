@@ -8,7 +8,11 @@ class Bio::Primer3::Result
   # Was there any primers found? Assumes you were looking for a left primer, with
   # a right primer, which won't always be the case.
   def primer_found?
-    @output_hash['PRIMER_PAIR_NUM_RETURNED'].to_i>0
+    @output_hash['PRIMER_PAIR_NUM_RETURNED'].to_i>0 or
+    (!@output_hash['PRIMER_LEFT_NUM_RETURNED'].nil? and 
+     @output_hash['PRIMER_LEFT_NUM_RETURNED'].to_i>0
+     !@output_hash['PRIMER_RIGHT_NUM_RETURNED'].nil? and 
+     @output_hash['PRIMER_RIGHT_NUM_RETURNED'].to_i>0)
   end
   alias_method :yeh?, :primer_found?
 
