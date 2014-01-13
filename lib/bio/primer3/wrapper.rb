@@ -63,7 +63,9 @@ class Bio::Primer3
   
   # Ask primer3 if 2 primers are compatible, without regard to the sequence
   # that they PCR. i.e. work out if there is any primer dimer issue, for instance
-  # or whether they have disparate melting temperatures
+  # or whether they have disparate melting temperatures.
+  #
+  # Returns true/false and the Bio::Primer3::Result object
   def self.test_primer_compatibility(primer1, primer2, other_primer3_options_hash={})
     hash = {
       'SEQUENCE_PRIMER'=>primer1,
@@ -71,6 +73,7 @@ class Bio::Primer3
       'PRIMER_TASK'=>'check_primers',
     }.merge(other_primer3_options_hash)
     
-    return Bio::Primer3.run(hash).primer_found?
+    result = Bio::Primer3.run(hash)
+    return result.primer_found?, result
   end
 end
