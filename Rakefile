@@ -17,8 +17,8 @@ Jeweler::Tasks.new do |gem|
   gem.name = "bio-primer3"
   gem.homepage = "http://github.com/wwood/bioruby-primer3"
   gem.license = "MIT"
-  gem.summary = %Q{TODO: one-line summary of your gem}
-  gem.description = %Q{TODO: longer description of your gem}
+  gem.summary = %Q{Primer3-related Ruby code}
+  gem.description = %Q{Primer3-related Ruby code - wrappers, Boulder IO, etc.}
   gem.email = "donttrustben@gmail.com"
   gem.authors = ["Ben J Woodcroft"]
   # dependencies defined in Gemfile
